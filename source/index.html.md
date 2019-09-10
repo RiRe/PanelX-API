@@ -1,239 +1,476 @@
 ---
-title: API Reference
+title: PanelX API - sourceWAY GmbH
 
-language_tabs: # must be one of https://git.io/vQNgJ
-  - shell
-  - ruby
-  - python
-  - javascript
+language_tabs:
+  - php
 
 toc_footers:
-  - <a href='#'>Sign Up for a Developer Key</a>
-  - <a href='https://github.com/lord/slate'>Documentation Powered by Slate</a>
-
-includes:
-  - errors
+  - <a href='https://sourceway.de/imprint' target='_blank'>Imprint</a>
 
 search: true
 ---
 
 # Introduction
 
-Welcome to the Kittn API! You can use our API to access Kittn API endpoints, which can get information on various cats, kittens, and breeds in our database.
+PanelX has an API available to be integrated in other software solutions. This documentation covers all available API actions, from authentication to endpoints. PanelX API is a RESTful API.
 
-We have language bindings in Shell, Ruby, Python, and JavaScript! You can view code examples in the dark area to the right, and you can switch the programming language of the examples with the tabs in the top right.
+We use `https://panelx.de` as base URL, this is the usual case.
 
-This example API documentation page was created with [Slate](https://github.com/lord/slate). Feel free to edit it and use it as a base for your own API's documentation.
+We provide example codes in PHP. You can view code examples in the dark area to the right.
+
+# Return values & error handling
+
+> Successful request without data
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Request successful",
+  "data": {}
+}
+```
+
+> Failed request
+
+```json
+{
+  "status": false,
+  "code": 1200,
+  "msg": "An error occured.",
+  "data": {}
+}
+```
+
+PanelX API returns data in JSON format.
+
+If you manage to send a request to a valid URL with a valid HTTP method, you will get everytime a HTTP status code `200`, independently of the actions result.
+
+Each response has four root-elements:
+
+`status` is a boolean describing if the call was successful and the action was performed correctly.
+
+`code` is an error code, which can be useful for the developers to debug problems. In case of a successful call, the code is `1000` always.
+
+`msg` is a message explaining the `code` returned. It can give more information about an error, so the message may not be equal for the same error code of a method.
+
+`data` contains information that is returned by the API for your request. That may be e.g. IDs of created objects or a list of results that you have requested.
 
 # Authentication
 
-> To authorize, use this code:
+Every request sent to PanelX API requires authentication. That is done via HTTP Basic Auth, using the requesting users email address and password.
 
-```ruby
-require 'kittn'
+The HTTP Basic Auth header should be built and sent like this:
 
-api = Kittn::APIClient.authorize!('meowmeowmeow')
+`Authentication: Basic base64_encode(email:password)`
+
+The PanelX API is only available for administrators and resellers.
+
+There are some global failure codes regarding authentication:
+
+Failure Code | Meaning
+---------- | -------
+1500 | Invalid authentication header.
+1501 | User authentication failed.
+1502 | API usage not allowed (not an administrator or reseller)
+
+# Create user
+
+```php
+<?php
+$req = [
+  "name" => "John Doe",
+  "email" => "john.doe@example.com",
+  "password" => "Secret123!",
+];
+
+$ch = curl_init("https://panelx.de/api/users");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($req));
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
 ```
 
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-```
-
-```shell
-# With shell, you can just pass the correct header with each request
-curl "api_endpoint_here"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-```
-
-> Make sure to replace `meowmeowmeow` with your API key.
-
-Kittn uses API keys to allow access to the API. You can register a new Kittn API key at our [developer portal](http://example.com/developers).
-
-Kittn expects for the API key to be included in all API requests to the server in a header that looks like the following:
-
-`Authorization: meowmeowmeow`
-
-<aside class="notice">
-You must replace <code>meowmeowmeow</code> with your personal API key.
-</aside>
-
-# Kittens
-
-## Get All Kittens
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get()
-```
-
-```shell
-curl "http://example.com/api/kittens"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let kittens = api.kittens.get();
-```
-
-> The above command returns JSON structured like this:
+> The above request returns JSON structured like this:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
-  },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
+{
+  "status": true,
+  "code": 1000,
+  "msg": "User created",
+  "data": {
+    "id": 123
   }
-]
-```
-
-This endpoint retrieves all kittens.
-
-### HTTP Request
-
-`GET http://example.com/api/kittens`
-
-### Query Parameters
-
-Parameter | Default | Description
---------- | ------- | -----------
-include_cats | false | If set to true, the result will also include cats.
-available | true | If set to false, the result will include kittens that have already been adopted.
-
-<aside class="success">
-Remember — a happy kitten is an authenticated kitten!
-</aside>
-
-## Get a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get(2)
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get(2)
-```
-
-```shell
-curl "http://example.com/api/kittens/2"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.get(2);
-```
-
-> The above command returns JSON structured like this:
-
-```json
-{
-  "id": 2,
-  "name": "Max",
-  "breed": "unknown",
-  "fluffiness": 5,
-  "cuteness": 10
 }
 ```
 
-This endpoint retrieves a specific kitten.
+`POST /api/users`
 
-<aside class="warning">Inside HTML code blocks like this one, you can't use Markdown, so use <code>&lt;code&gt;</code> blocks to denote code.</aside>
+This endpoint can be used to create a new user.
 
-### HTTP Request
-
-`GET http://example.com/kittens/<ID>`
-
-### URL Parameters
+## Query parameters
 
 Parameter | Description
 --------- | -----------
-ID | The ID of the kitten to retrieve
+name | **Required** Full name
+email | **Required** Email address
+password | **Required** Password (min. 8 characters)
 
-## Delete a Specific Kitten
+## Return values
 
-```ruby
-require 'kittn'
+Parameter | Description
+--------- | -----------
+id | ID of the newly created user
 
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.delete(2)
+## Failure codes
+
+Failure Code | Meaning
+---------- | -------
+1200 | No name specified.
+1201 | No or invalid email specified.
+1202 | Email already exists.
+1203 | Password is too short (8 characters minimum).
+
+# Modify user
+
+```php
+<?php
+$req = [
+  "status" => false,
+];
+
+$ch = curl_init("https://panelx.de/api/users/123");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($req));
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
 ```
 
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.delete(2)
-```
-
-```shell
-curl "http://example.com/api/kittens/2"
-  -X DELETE
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.delete(2);
-```
-
-> The above command returns JSON structured like this:
+> The above request returns JSON structured like this:
 
 ```json
 {
-  "id": 2,
-  "deleted" : ":("
+  "status": true,
+  "code": 1000,
+  "msg": "User updated",
+  "data": {}
 }
 ```
 
-This endpoint deletes a specific kitten.
+`POST /api/users/USER_ID`
 
-### HTTP Request
+This endpoint can be used to modify an existing user. Currently, PanelX API supports modification of user status (active / locked) and password.
 
-`DELETE http://example.com/kittens/<ID>`
-
-### URL Parameters
+## Query parameters
 
 Parameter | Description
 --------- | -----------
-ID | The ID of the kitten to delete
+status | If set, interpreted as boolean for user status (`true` = active, `false` = locked)
+password | If set, new password for user
 
+## Return values
+
+None
+
+## Failure codes
+
+Failure Code | Meaning
+---------- | -------
+1200 | User not found.
+1201 | Password is too short (8 characters minimum).
+
+# Add contract
+
+```php
+<?php
+$req = [
+  "name" => "web1",
+  "client" => 123,
+  "server_id" => 1,
+  "template" => 1,
+];
+
+$ch = curl_init("https://panelx.de/api/contracts");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($req));
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
+```
+
+> The above request returns JSON structured like this:
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Contract created",
+  "data": {
+    "id": 10
+  }
+}
+```
+
+`POST /api/contracts`
+
+This endpoint can be used to create a new contract for an user you own.
+
+## Query parameters
+
+Parameter | Description
+--------- | -----------
+name | **Required** Name for the contract (min. 3 characters)
+client | **Required** User ID
+server_id | **Required** Server ID (parameter name has technical reasons)
+template | **Required** Template ID
+
+## Return values
+
+Parameter | Description
+--------- | -----------
+id | ID of the newly created contract
+
+## Failure codes
+
+Failure Code | Meaning
+---------- | -------
+1200 | No contract name specified.
+1201 | Specified contract name too short (3 characters minimum).
+1202 | Contract name already exists.
+1203 | No/invalid customer specified.
+1204 | No/invalid server specified.
+1205 | No/invalid template specified.
+1206 | Internal error (see `msg`)
+
+# Modify contract
+
+```php
+<?php
+$req = [
+  "template" => 2,
+];
+
+$ch = curl_init("https://panelx.de/api/contracts/10");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($req));
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
+```
+
+> The above request returns JSON structured like this:
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Contract updated",
+  "data": {}
+}
+```
+
+`POST /api/contracts/CONTRACT_ID`
+
+This endpoint can be used to edit an existing contract.
+
+## Query parameters
+
+Parameter | Description
+--------- | -----------
+template | **Required** New template ID
+
+## Return values
+
+None
+
+## Failure codes
+
+Failure Code | Meaning
+---------- | -------
+1200 | Contract not found.
+1201 | No/invalid template specified.
+
+# Delete contract
+
+```php
+<?php
+$ch = curl_init("https://panelx.de/api/contracts/10");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
+```
+
+> The above request returns JSON structured like this:
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Contract deleted",
+  "data": {}
+}
+```
+
+`DELETE /api/contracts/CONTRACT_ID`
+
+This endpoint can be used to delete an existing contract.
+
+## Query parameters
+
+None
+
+## Return values
+
+None
+
+## Failure codes
+
+Failure Code | Meaning
+---------- | -------
+1200 | Contract not found.
+
+# List templates
+
+```php
+<?php
+$ch = curl_init("https://panelx.de/api/templates");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
+```
+
+> The above request returns JSON structured like this:
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Templates fetched",
+  "data": [
+    {
+      "id": 1,
+      "name": "Default template"
+    }
+  ]
+}
+```
+
+`GET /api/templates`
+
+This endpoint can be used to fetch all templates existing for your user.
+
+## Query parameters
+
+None
+
+## Return values
+
+List (array) of templates existing, containing template `id` and `name`.
+
+## Failure codes
+
+None
+
+# List servers
+
+```php
+<?php
+$ch = curl_init("https://panelx.de/api/server");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "admin@panelx.de:test1234");
+$res = curl_exec($ch);
+
+if (curl_errno($ch)) {
+  die(curl_error($ch));
+}
+
+curl_close($ch);
+$res = json_decode($res, true);
+
+print_r($res);
+```
+
+> The above request returns JSON structured like this:
+
+```json
+{
+  "status": true,
+  "code": 1000,
+  "msg": "Servers fetched",
+  "data": [
+    {
+      "id": 1,
+      "hostname": "localhost"
+    }
+  ]
+}
+```
+
+`GET /api/servers`
+
+This endpoint can be used to fetch all servers useable by your user.
+
+## Query parameters
+
+None
+
+## Return values
+
+List (array) of servers existing, containing server `id` and `hostname`.
+
+## Failure codes
+
+None
